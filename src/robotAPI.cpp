@@ -7,9 +7,8 @@ int main(int argc, char *argv[]){
     configuraIOs();
 
     int i;
-    
     getImage();
-
+    
     //for(i = 0; i < 1; i++){
         //moveDistancia('f', 1); //se movimenta para frente por um metro
         //vira('d', 1); //vira para direita por 1 segundos
@@ -180,6 +179,12 @@ void para() {
     motorDT(' ');
 }
 
+void resetaVariaveis(){
+    flag[0] = flag[1] = flag[2] = flag[3] = 0;
+    seg_cont[0] = seg_cont[1] = seg_cont[2] = seg_cont[3] = SEG_NUM; 
+    dist_total = 0; 
+}
+
 void motorControledMove(int sensorID, int sensorID_POS) {
     usleep(1*1000); //delay para fazer a leitura do sensor
     if(digitalRead(sensorID) == 0 && !flag[sensorID_POS]) flag[sensorID_POS] = 1;
@@ -211,6 +216,7 @@ void moveDistancia(char sentido, int metros){
 
     dist_total = 0;
     para();
+    resetaVariaveis();
 }
 
 void moveTempo(char sentido, float tempo){
@@ -246,20 +252,21 @@ void viraAngulo(char sentido, int angulo){
     else
         esquerda();
 
-    angulo = angulo * 1;
+    angulo = angulo * 0.2;
     
-    while(dist_total/2 < angulo){ //média de distancia percorrida pelos quatro motores
-        if(sentido == 'd'){
-            motorControledRot(SENSOR_ED, SENSOR_ED_DIST_POS);
-            motorControledRot(SENSOR_ET, SENSOR_ET_DIST_POS);
-        }else{
-            motorControledRot(SENSOR_DD, SENSOR_DD_DIST_POS);
-            motorControledRot(SENSOR_DT, SENSOR_DT_DIST_POS);
-        }
+    while(dist_total/4 < angulo){ //média de distancia percorrida pelos quatro motores
+        //if(sentido == 'd'){
+        motorControledRot(SENSOR_ED, SENSOR_ED_DIST_POS);
+        motorControledRot(SENSOR_ET, SENSOR_ET_DIST_POS);
+        //}else{
+        motorControledRot(SENSOR_DD, SENSOR_DD_DIST_POS);
+        motorControledRot(SENSOR_DT, SENSOR_DT_DIST_POS);
+        
     }
 
     dist_total = 0;
     para();
+    resetaVariaveis();
 }
 
 void viraTempo(char sentido, int tempo){
@@ -278,12 +285,11 @@ int getImage(){
     
     cout << "Sistema Inicializado." << endl;
 
-    //tire os comentários caso queira verificar ao vivo
-    VideoCapture leftcap(0);
-    VideoCapture rightcap(1);
+//    VideoCapture leftcap(0);
+//    VideoCapture rightcap(2);
 
-    if(!leftcap.isOpened() || !rightcap.isOpened())  // check if we succeeded
-        return -1;
+//    if(!leftcap.isOpened() || !rightcap.isOpened())  // check if we succeeded
+  //      return -1;
 
     Mat left, right;
 	
@@ -305,8 +311,8 @@ int getImage(){
         if(right.size() != left.size()) return -1;
 
         
-        imshow( "right", right ); // Show our image inside it.
-        imshow( "left", left ); // Show our image inside it.
+//        imshow( "right", right ); // Show our image inside it.
+  //      imshow( "left", left ); // Show our image inside it.
 
 //        if(waitKey(30) >= 0){
             imwrite("right.jpg", right);
@@ -316,8 +322,8 @@ int getImage(){
    // }
     return 0;
 }
-/*
-void calibrarCamera(){
+
+int calibrarCamera(){
     Size boardSize(9,6);
 
     const float squareSize = 22; //tamanho da célula do alvo
@@ -407,7 +413,7 @@ void calibrarCamera(){
     file << "fundMatrix" << fundamentalMatrix;
 }
 
-void criaDatasetCalib(){
+int criaDatasetCalib(){
     Size boardSize(9,6);
     int curImg = 0;
     int nImages = 0;
@@ -417,8 +423,10 @@ void criaDatasetCalib(){
 
     if(nImages == 0) return 0;
 
-    VideoCapture left(1); //parâmetro de inicialização, representa a câmera
-    VideoCapture right(2);
+//    VideoCapture left(1); //parâmetro de inicialização, representa a câmera
+   // VideoCapture right(2);
+  //  VideoCapture leftcap(0);
+    //VideoCapture rightcap(1);
 
     std::vector<std::vector<Point2f>> leftImagePoints(nImages);
     std::vector<std::vector<Point2f>> rightImagePoints(nImages);
@@ -427,11 +435,11 @@ void criaDatasetCalib(){
 
     while(true){
 
-    if(!(left.grab() && right.grab())) return -1; //método "grab" garante que o frame da câmera da esquerda seja capturado
+    if(!(leftcap.grab() && rightcap.grab())) return -1; //método "grab" garante que o frame da câmera da esquerda seja capturado
                                                     //ao mesmo tempo que o frame da câmera da direita
 
-    left.read(left_f);
-    right.read(right_f);
+    leftcap.read(left_f);
+    rightcap.read(right_f);
 
     if(left_f.empty() || right_f.empty())
     {
@@ -474,7 +482,7 @@ void criaDatasetCalib(){
     return 0;
 }
 
-void stereo(){
+int stereo(){
     FileStorage readFile("calib.txt", FileStorage::READ);
 
     Mat cameraL,
@@ -496,8 +504,8 @@ void stereo(){
     readFile["fundMatrix"] >> fundamentalMatrix;
 
     //tire os comentários caso queira verificar ao vivo
-    VideoCapture leftim(1);
-    VideoCapture rightim(2);
+    //VideoCapture leftcap(0);
+    //VideoCapture rightcap(1);
 
     Mat left, right, disp;
 
@@ -509,86 +517,88 @@ void stereo(){
 
     Size newImageSize;
 
-    int frame2_width = rightim.get(CV_CAP_PROP_FRAME_WIDTH); 
-    int frame2_height = rightim.get(CV_CAP_PROP_FRAME_HEIGHT); 
+    int frame2_width = rightcap.get(CV_CAP_PROP_FRAME_WIDTH); 
+    int frame2_height = rightcap.get(CV_CAP_PROP_FRAME_HEIGHT); 
 
 
-    VideoWriter video("mapaDisparidades.avi",CV_FOURCC('M','J','P','G'), rightim.get(CV_CAP_PROP_FPS), Size(frame2_width,frame2_height));
+//    VideoWriter video("mapaDisparidades.avi",CV_FOURCC('M','J','P','G'), rightim.get(CV_CAP_PROP_FPS), Size(frame2_width,frame2_height));
 
 
     while(true){
 
-    //tire os comentários caso queira verificar ao vivo
-    if(!(leftim.grab() && rightim.grab())) return -1;
+        //tire os comentários caso queira verificar ao vivo
+        if(!(leftcap.grab() && rightcap.grab())) return -1;
 
-    leftim.read(left);
-    rightim.read(right);
+        leftcap.read(left);
+        rightcap.read(right);
 
-    if(left.empty() || right.empty())
-    {
-        std::cerr << "ERRO! Frames não capturados." << std::endl;
-        return -1;
+        if(left.empty() || right.empty())
+        {
+            std::cerr << "ERRO! Frames não capturados." << std::endl;
+            return -1;
+        }
+
+        if(right.size() != left.size()) return -1;
+
+        cvtColor(left, left, COLOR_RGB2GRAY);
+        cvtColor(right, right, COLOR_RGB2GRAY);
+
+        //realiza a retificação das imagens
+        stereoRectify(cameraL, distortionCoefficientsL,
+                        cameraR, distortionCoefficientsR,
+                        Size(640,480), rotationMatrix, translationVector,
+                        rectTransL, rectTransR,
+                        projMatrixL, projMatrixR,
+                        disp_depthMatrix, CALIB_ZERO_DISPARITY, -1, newImageSize, &roi1, &roi2);
+
+        Mat newCameraL, newCameraR, left_map1, left_map2, right_map1, right_map2;
+
+        Mat left_und, right_und;
+
+        initUndistortRectifyMap(cameraL, distortionCoefficientsL,
+                                rectTransL, projMatrixL, Size(left.cols, left.rows),
+                                CV_16SC2, left_map1, left_map2);
+        initUndistortRectifyMap(cameraR, distortionCoefficientsR,
+                                rectTransR, projMatrixR, Size(right.cols, right.rows),
+                                CV_16SC2, right_map1, right_map2);
+
+        remap(left, left_und, left_map1, left_map2, INTER_LINEAR);
+        remap(right, right_und, right_map1, left_map2, INTER_LINEAR);
+
+
+        GaussianBlur(left, left, Size(5,5), 10, 10, BORDER_DEFAULT);
+        GaussianBlur(right, right, Size(5,5), 10, 10, BORDER_DEFAULT);
+
+        Ptr<StereoBM> bm = StereoBM::create(0,21);
+
+        //bm->setROI1(roi1);
+        //bm->setROI2(roi2);
+        bm->setPreFilterCap(31);
+        bm->setBlockSize(15);
+        bm->setMinDisparity(0);
+        bm->setNumDisparities(64);
+        bm->setTextureThreshold(1000);
+        bm->setUniquenessRatio(15);
+        bm->setSpeckleWindowSize(100);
+        bm->setSpeckleRange(32);
+        bm->setDisp12MaxDiff(10);
+
+        //calcula o mapa de disparidades a partir das imagens retificadas
+        bm->compute(left_und, right_und, disp);
+
+        //como o mapa de disparidade está muito saturado, normalizamos a imagem para podermos visualizar o mapa de forma clara
+        normalize(disp, disp, 0, 255, CV_MINMAX, CV_8U);
+
+        //muda-se a apresentação das intensidades para melhorar a visualização
+        applyColorMap(disp, disp, COLORMAP_JET);
+
+//        video.write(disp);
+
+        imshow("Mapa de disparidades", disp);
+
+        if(waitKey(2) > 0) break;
     }
-
-    if(right.size() != left.size()) return -1;
-
-    cvtColor(left, left, COLOR_RGB2GRAY);
-    cvtColor(right, right, COLOR_RGB2GRAY);
-
-    //realiza a retificação das imagens
-    stereoRectify(cameraL, distortionCoefficientsL,
-                    cameraR, distortionCoefficientsR,
-                    Size(640,480), rotationMatrix, translationVector,
-                    rectTransL, rectTransR,
-                    projMatrixL, projMatrixR,
-                    disp_depthMatrix, CALIB_ZERO_DISPARITY, -1, newImageSize, &roi1, &roi2);
-
-    Mat newCameraL, newCameraR, left_map1, left_map2, right_map1, right_map2;
-
-    Mat left_und, right_und;
-
-    initUndistortRectifyMap(cameraL, distortionCoefficientsL,
-                            rectTransL, projMatrixL, Size(left.cols, left.rows),
-                            CV_16SC2, left_map1, left_map2);
-    initUndistortRectifyMap(cameraR, distortionCoefficientsR,
-                            rectTransR, projMatrixR, Size(right.cols, right.rows),
-                            CV_16SC2, right_map1, right_map2);
-
-    remap(left, left_und, left_map1, left_map2, INTER_LINEAR);
-    remap(right, right_und, right_map1, left_map2, INTER_LINEAR);
-
-
-    GaussianBlur(left, left, Size(5,5), 10, 10, BORDER_DEFAULT);
-    GaussianBlur(right, right, Size(5,5), 10, 10, BORDER_DEFAULT);
-
-    Ptr<StereoBM> bm = StereoBM::create(0,21);
-
-    //bm->setROI1(roi1);
-    //bm->setROI2(roi2);
-    bm->setPreFilterCap(31);
-    bm->setBlockSize(15);
-    bm->setMinDisparity(0);
-    bm->setNumDisparities(64);
-    bm->setTextureThreshold(1000);
-    bm->setUniquenessRatio(15);
-    bm->setSpeckleWindowSize(100);
-    bm->setSpeckleRange(32);
-    bm->setDisp12MaxDiff(10);
-
-    //calcula o mapa de disparidades a partir das imagens retificadas
-    bm->compute(left_und, right_und, disp);
-
-    //como o mapa de disparidade está muito saturado, normalizamos a imagem para podermos visualizar o mapa de forma clara
-    normalize(disp, disp, 0, 255, CV_MINMAX, CV_8U);
-
-    //muda-se a apresentação das intensidades para melhorar a visualização
-    applyColorMap(disp, disp, COLORMAP_JET);
-
-    video.write(disp);
-
-    imshow("Mapa de disparidades", disp);
-
-    if(waitKey(2) > 0) break;
+    return 0;
 }
 
 std::vector<Point3f> Create3DChessboardCorners(Size boardSize, float squareSize){
@@ -608,4 +618,32 @@ std::vector<Point3f> Create3DChessboardCorners(Size boardSize, float squareSize)
   return corners;
 }
 
-*/
+void teste1(){
+    moveTempo('f', 1);
+    viraTempo('d', 2);
+    viraTempo('e', 2);
+    moveTempo('r', 1);
+}
+
+void teste2(){
+    moveDistancia('f', 30);
+    viraAngulo('d', 90);
+    moveDistancia('r', 10);
+    viraAngulo('e', 45);
+    moveDistancia('f', 10);
+    viraAngulo('e', 45);
+}
+
+void teste3(){
+    moveDistancia('f', 20);
+}
+
+void teste4(){
+    moveDistancia('f', 5);
+    
+    usleep(1000000);
+    moveDistancia('f', 5);
+    
+    usleep(1000000);
+    moveDistancia('f', 5);
+}

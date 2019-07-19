@@ -68,7 +68,7 @@ float circuferencia;	                                //calcula circunferencia da
 float dist_seg;                                         //distancia de cada segmento
 
 VideoCapture leftcap(0);
-VideoCapture rightcap(1);
+VideoCapture rightcap(2);
 
 void configuraIOs();
 
@@ -93,9 +93,13 @@ void viraTempo(char sentido, int tempo);
 
 
 int getImage();
-/*
-void calibrarCamera();
-void criaDatasetCalib();
-void stereo();
+
+int calibrarCamera();
+int criaDatasetCalib();
+int stereo();
 std::vector<Point3f> Create3DChessboardCorners(Size boardSize, float squareSize);
-*/
+
+void teste1();
+void teste2();
+void teste3();
+void teste4();
