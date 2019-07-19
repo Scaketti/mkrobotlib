@@ -1,2 +1,2 @@
-# mkrobotlib
-Biblioteca de controle de um robô móvel desenvolvido no projeto de pesquisa do grupo COVAP da UTFPR-PG
+# MK1 Robot Library
+This Library contains the code needed to control a robot developed on the research project of the group COVAP of UTFPR-PG.
