@@ -7,7 +7,8 @@ int main(int argc, char *argv[]){
     configuraIOs();
 
     int i;
-    getImage();
+    criaDatasetCalib();
+    calibrarCamera();
     
     //for(i = 0; i < 1; i++){
         //moveDistancia('f', 1); //se movimenta para frente por um metro
@@ -423,60 +424,56 @@ int criaDatasetCalib(){
 
     if(nImages == 0) return 0;
 
-//    VideoCapture left(1); //parâmetro de inicialização, representa a câmera
-   // VideoCapture right(2);
-  //  VideoCapture leftcap(0);
-    //VideoCapture rightcap(1);
-
     std::vector<std::vector<Point2f>> leftImagePoints(nImages);
     std::vector<std::vector<Point2f>> rightImagePoints(nImages);
 
     Mat left_f, right_f, left_chess, right_chess;
-
+    cout << "OK\n";
     while(true){
-
-    if(!(leftcap.grab() && rightcap.grab())) return -1; //método "grab" garante que o frame da câmera da esquerda seja capturado
-                                                    //ao mesmo tempo que o frame da câmera da direita
-
-    leftcap.read(left_f);
-    rightcap.read(right_f);
-
-    if(left_f.empty() || right_f.empty())
-    {
-        std::cerr << "ERRO! Frame não capturado." << std::endl;
-        return -1;
-    }
-
-
-    if(right_f.size() != left_f.size())
-    {
-        std::cerr << "ERRO! Imagens não possuem a mesma resolução." << std::endl;
-        return -1;
-    }
-
-    bool left_found = findChessboardCorners(left_f, boardSize, leftImagePoints[curImg]);
-    bool right_found = findChessboardCorners(right_f, boardSize, rightImagePoints[curImg]);
-
-    left_chess = left_f.clone();
-    right_chess = right_f.clone();
-
-    drawChessboardCorners(left_chess, boardSize, leftImagePoints[curImg], left_found);
-    drawChessboardCorners(right_chess, boardSize, rightImagePoints[curImg], right_found);
-
-    imshow("Left View", left_chess);
-    imshow("Right View", right_chess);
-
-    //caso o alvo esteja presente nas duas imagens e o usuário pressionou alguma tecla, crie uma imagem para a calibração
-    if((waitKey(2) > 0) && (left_found && right_found)) 
+        cout << "OK1\n";
+        if(!(leftcap.grab() && rightcap.grab())) return -1; //método "grab" garante que o frame da câmera da esquerda seja capturado
+                                                        //ao mesmo tempo que o frame da câmera da direita
+cout << "OK2\n";
+        leftcap.read(left_f);
+        rightcap.read(right_f);
+cout << "OK3\n";
+        if(left_f.empty() || right_f.empty())
         {
-        cout << "Print " << curImg << "!" << endl; 
-
-        imwrite("calib/left_" + to_string(curImg) + ".jpg", left_f);
-
-        imwrite("calib/right_" + to_string(curImg) + ".jpg" , right_f);
-        curImg++;
+            std::cerr << "ERRO! Frame não capturado." << std::endl;
+            return -1;
         }
-    if(curImg > (nImages-1)) break;
+
+
+        if(right_f.size() != left_f.size())
+        {
+            std::cerr << "ERRO! Imagens não possuem a mesma resolução." << std::endl;
+            return -1;
+        }
+cout << "OK4\n";
+        bool left_found = findChessboardCorners(left_f, boardSize, leftImagePoints[curImg]);
+        bool right_found = findChessboardCorners(right_f, boardSize, rightImagePoints[curImg]);
+
+        left_chess = left_f.clone();
+        right_chess = right_f.clone();
+
+       // drawChessboardCorners(left_chess, boardSize, leftImagePoints[curImg], left_found);
+      //  drawChessboardCorners(right_chess, boardSize, rightImagePoints[curImg], right_found);
+
+       // imshow("Left View", left_chess);
+       // imshow("Right View", right_chess);
+cout << "OK5\n";
+        //caso o alvo esteja presente nas duas imagens e o usuário pressionou alguma tecla, crie uma imagem para a calibração
+        if((waitKey(2) > 0) && (left_found && right_found)) 
+            {
+            cout << "Print " << curImg << "!" << endl; 
+
+            imwrite("calib_dataset/left_" + to_string(curImg) + ".jpg", left_f);
+
+            imwrite("calib_dataset/right_" + to_string(curImg) + ".jpg" , right_f);
+            curImg++;
+            }
+        if(curImg > (nImages-1)) break;
+        cout << "TENTE TIRAR";
     }
 
     return 0;

@@ -70,6 +70,13 @@ float dist_seg;                                         //distancia de cada segm
 VideoCapture leftcap(0);
 VideoCapture rightcap(2);
 
+//leftcap.set(CAP_PROP_FRAME_WIDTH, 160);
+//leftcap.set(CAP_PROP_FRAME_HEIGHT, 120);
+
+//rightcap.set(CAP_PROP_FRAME_WIDTH, 160);
+//rightcap.set(CAP_PROP_FRAME_HEIGHT, 120);
+
+
 void configuraIOs();
 
 void motorED(char sentido);
