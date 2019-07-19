@@ -1,4 +1,4 @@
-#include "robotAPI.h"
+#include "robotAPI.hpp"
 
 int main(int argc, char *argv[]){
 	
@@ -9,7 +9,7 @@ int main(int argc, char *argv[]){
     int i;
 
     //for(i = 0; i < 1; i++){
-        moveDistancia('f', 1); //se movimenta para frente por um metro
+        //moveDistancia('f', 1); //se movimenta para frente por um metro
         //vira('d', 1); //vira para direita por 1 segundos
     //}
 

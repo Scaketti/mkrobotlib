@@ -1,5 +1,23 @@
 #include "robotAPI.hpp"
 
+int main(int argc, char *argv[]){
+	
+	if(wiringPiSetupGpio() == -1) return -1;
+
+    configuraIOs();
+
+    int i;
+    
+    getImage();
+
+    //for(i = 0; i < 1; i++){
+        //moveDistancia('f', 1); //se movimenta para frente por um metro
+        //vira('d', 1); //vira para direita por 1 segundos
+    //}
+
+	return 0;
+}
+
 void configuraIOs() {
     circuferencia = PI * d_roda;
     dist_seg = circuferencia / SEG_NUM;  
@@ -162,14 +180,6 @@ void para() {
     motorDT(' ');
 }
 
-int validateMov(int sensorID, int seg_cont) {
-    int i;
-    for(i = 0; i < 4; i++){
-        if(seg_cont[sensorID] > seg_cont[i]) return 0;
-    }
-    return 1;
-}
-
 void motorControledMove(int sensorID, int sensorID_POS) {
     usleep(1*1000); //delay para fazer a leitura do sensor
     if(digitalRead(sensorID) == 0 && !flag[sensorID_POS]) flag[sensorID_POS] = 1;
@@ -193,10 +203,10 @@ void moveDistancia(char sentido, int metros){
         re();
 
     while(dist_total/4 < metros){ //média de distancia percorrida pelos quatro motores
-        motorControledMov(SENSOR_ED, SENSOR_ED_DIST_POS);
-        motorControledMov(SENSOR_DD, SENSOR_DD_DIST_POS);
-        motorControledMov(SENSOR_ET, SENSOR_ET_DIST_POS);
-        motorControledMov(SENSOR_DT, SENSOR_DT_DIST_POS);
+        motorControledMove(SENSOR_ED, SENSOR_ED_DIST_POS);
+        motorControledMove(SENSOR_DD, SENSOR_DD_DIST_POS);
+        motorControledMove(SENSOR_ET, SENSOR_ET_DIST_POS);
+        motorControledMove(SENSOR_DT, SENSOR_DT_DIST_POS);
     }
 
     dist_total = 0;
@@ -231,7 +241,7 @@ void motorControledRot(int sensorID, int sensorID_POS) {
 }
 
 void viraAngulo(char sentido, int angulo){
-    if(direcao == 'd')
+    if(sentido == 'd')
         direita();
     else
         esquerda();
@@ -239,7 +249,7 @@ void viraAngulo(char sentido, int angulo){
     angulo = angulo * 1;
     
     while(dist_total/2 < angulo){ //média de distancia percorrida pelos quatro motores
-        if(direcao == 'd'){
+        if(sentido == 'd'){
             motorControledRot(SENSOR_ED, SENSOR_ED_DIST_POS);
             motorControledRot(SENSOR_ET, SENSOR_ET_DIST_POS);
         }else{
@@ -253,7 +263,7 @@ void viraAngulo(char sentido, int angulo){
 }
 
 void viraTempo(char sentido, int tempo){
-    if(direcao == 'd')
+    if(sentido == 'd')
         direita();
     else
         esquerda();
@@ -263,33 +273,50 @@ void viraTempo(char sentido, int tempo){
     para();
 }
 
-int getImage(int im){
+
+int getImage(){
+    
+    cout << "Sistema Inicializado." << endl;
+
+    //tire os comentários caso queira verificar ao vivo
+    VideoCapture leftcap(0);
+    VideoCapture rightcap(1);
+
     if(!leftcap.isOpened() || !rightcap.isOpened())  // check if we succeeded
         return -1;
 
     Mat left, right;
 	
-    if(!(leftcap.grab() && rightcap.grab())) return -1;
+    //namedWindow( "left", CV_WINDOW_AUTOSIZE ); // Create a window for display.
+    //namedWindow( "right", CV_WINDOW_AUTOSIZE ); // Create a window for display.
+	//tire os comentários caso queira verificar ao vivo
+   // for(;;){
+        if(!(leftcap.grab() && rightcap.grab())) return -1;
 
-    leftcap >> left;
-    rightcap >> right;
+        leftcap >> left;
+        rightcap >> right;
 
-    if(left.empty() || right.empty())
-    {
-        std::cerr << "ERRO! Frames não capturados." << std::endl;
-        return -1;
-    }
+        if(left.empty() || right.empty())
+        {
+            std::cerr << "ERRO! Frames não capturados." << std::endl;
+            return -1;
+        }
 
-    if(right.size() != left.size()) return -1;
+        if(right.size() != left.size()) return -1;
 
-    if(waitKey(30) >= 0){
-        imwrite("right"+im+".jpg", right);
-        imwrite("left"+im+".jpg", left);
-        printf("Get image " + im + "\n");
-    }    
+        
+        imshow( "right", right ); // Show our image inside it.
+        imshow( "left", left ); // Show our image inside it.
+
+//        if(waitKey(30) >= 0){
+            imwrite("right.jpg", right);
+            imwrite("left.jpg", left);
+  //          break; 
+    //    }    
+   // }
     return 0;
 }
-
+/*
 void calibrarCamera(){
     Size boardSize(9,6);
 
@@ -580,3 +607,5 @@ std::vector<Point3f> Create3DChessboardCorners(Size boardSize, float squareSize)
 
   return corners;
 }
+
+*/

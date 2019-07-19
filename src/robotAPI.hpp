@@ -1,15 +1,20 @@
-#include <stdio.h>    
-#include <wiringPi.h> 
+#include <stdio.h>
+#include <wiringPi.h>
 #include <softPwm.h>
+#include <termios.h>
+#include <unistd.h> 
 
 #include "opencv2/calib3d.hpp"
-#include "opencv2/highgui.hpp"
 #include "opencv2/imgproc.hpp"
 #include "opencv2/imgcodecs.hpp"
+#include "opencv2/highgui.hpp"
 #include "opencv2/core/utility.hpp"
 
 #include <vector>
 #include <iostream>
+
+using namespace std;
+using namespace cv;
 
 #define nImage 36
 
@@ -62,8 +67,8 @@ float d_roda = 6.5;			                            //diametro da roda
 float circuferencia;	                                //calcula circunferencia da roda
 float dist_seg;                                         //distancia de cada segmento
 
-VideoCapture rightcap(0);
-VideoCapture leftcap(1);
+VideoCapture leftcap(0);
+VideoCapture rightcap(1);
 
 void configuraIOs();
 
@@ -78,15 +83,19 @@ void esquerda();
 void direita();
 void para();
 
-void motorControledMove(int sensorID, int sensorID_POS)
-int validateMov(int sensorID, int seg_cont);
+void motorControledMove(int sensorID, int sensorID_POS);
 void moveDistancia(char sentido, int metros);
+void moveTempo(char sentido, float tempo);
 
-void motorControledMove(int sensorID, int sensorID_POS)
+void motorControledRot(int sensorID, int sensorID_POS);
 void viraAngulo(char direcao, int vira);
+void viraTempo(char sentido, int tempo);
 
-int getImage(int im);
+
+int getImage();
+/*
 void calibrarCamera();
 void criaDatasetCalib();
 void stereo();
 std::vector<Point3f> Create3DChessboardCorners(Size boardSize, float squareSize);
+*/
