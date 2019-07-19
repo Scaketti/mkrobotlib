@@ -203,7 +203,18 @@ void moveDistancia(char sentido, int metros){
     para();
 }
 
-void motorControledMove(int sensorID, int sensorID_POS) {
+void moveTempo(char sentido, float tempo){
+    if(sentido == 'f')
+        frente();
+    else
+        re();
+
+    usleep(tempo*1000000);
+
+    para();
+}
+
+void motorControledRot(int sensorID, int sensorID_POS) {
     usleep(1*1000); //delay para fazer a leitura do sensor
     if(digitalRead(sensorID) == 0 && !flag[sensorID_POS]) flag[sensorID_POS] = 1;
 
@@ -219,20 +230,36 @@ void motorControledMove(int sensorID, int sensorID_POS) {
     if(seg_cont[sensorID_POS] == 0) seg_cont[sensorID_POS] = SEG_NUM;
 }
 
-void vira(char direcao, int vira){
+void viraAngulo(char sentido, int angulo){
+    if(direcao == 'd')
+        direita();
+    else
+        esquerda();
+
+    angulo = angulo * 1;
+    
+    while(dist_total/2 < angulo){ //média de distancia percorrida pelos quatro motores
+        if(direcao == 'd'){
+            motorControledRot(SENSOR_ED, SENSOR_ED_DIST_POS);
+            motorControledRot(SENSOR_ET, SENSOR_ET_DIST_POS);
+        }else{
+            motorControledRot(SENSOR_DD, SENSOR_DD_DIST_POS);
+            motorControledRot(SENSOR_DT, SENSOR_DT_DIST_POS);
+        }
+    }
+
+    dist_total = 0;
+    para();
+}
+
+void viraTempo(char sentido, int tempo){
     if(direcao == 'd')
         direita();
     else
         esquerda();
     
-    while(dist_total/4 < vira){ //média de distancia percorrida pelos quatro motores
-        motorControledRot(SENSOR_ED, SENSOR_ED_DIST_POS);
-        motorControledRot(SENSOR_DD, SENSOR_DD_DIST_POS);
-        motorControledRot(SENSOR_ET, SENSOR_ET_DIST_POS);
-        motorControledRot(SENSOR_DT, SENSOR_DT_DIST_POS);
-    }
+    usleep(tempo*1000000);
 
-    dist_total = 0;
     para();
 }
 
@@ -264,5 +291,292 @@ int getImage(int im){
 }
 
 void calibrarCamera(){
-    
+    Size boardSize(9,6);
+
+    const float squareSize = 22; //tamanho da célula do alvo
+
+    Mat left_f, right_f;
+
+    std::vector<std::vector<Point2f> > leftImagePoints(nImage);
+    std::vector<std::vector<Point2f> > rightImagePoints(nImage);
+    std::vector<std::vector<Point3f> > objectPoints(nImage);
+
+    Size imageSize;
+
+    Mat cameraMatrix[2];
+    cameraMatrix[0] = Mat::eye(3, 3, CV_64F);
+    cameraMatrix[1] = Mat::eye(3, 3, CV_64F);
+
+    Mat distortionCoefficients[2];
+    Mat rotationMatrix;
+    Mat translationVector;
+    Mat essentialMatrix;
+    Mat fundamentalMatrix;
+
+    double rms = 0;
+
+    for(int curImg = 0; curImg < nImage; curImg++){
+
+    left_f = imread("calib_dataset/left_" + to_string(curImg) + ".jpg", 0);
+    right_f = imread("calib_dataset/right_" + to_string(curImg) + ".jpg", 0);
+
+    if(left_f.empty() || right_f.empty())
+    {
+        std::cerr << "ERRO! Frames não capturados." << std::endl;
+        return -1;
+    }
+
+    imageSize = left_f.size();
+
+    if(right_f.size() != imageSize )
+    {
+        std::cerr << "ERRO! Frames precisam ser da mesma resolução." << std::endl;
+        return -1;
+    }
+
+    bool left_found = findChessboardCorners(left_f, boardSize, leftImagePoints[curImg]);
+    bool right_found = findChessboardCorners(right_f, boardSize, rightImagePoints[curImg]);
+
+    if(!(left_found && right_found))
+    {
+        std::cerr << "ERRO! Alvo de calibração não encontrado." << std::endl;
+        return -1;
+    }
+
+    //melhora os pontos encontrados no alvo e os refina
+    cv::cornerSubPix(left_f, leftImagePoints[curImg], cv::Size(5, 5), cv::Size(-1, -1), TermCriteria(CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 30, 0.1));
+    cv::cornerSubPix(right_f, rightImagePoints[curImg], cv::Size(5, 5), cv::Size(-1, -1), TermCriteria(CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 30, 0.1));
+
+    drawChessboardCorners(left_f, boardSize, leftImagePoints[curImg], left_found);
+    drawChessboardCorners(right_f, boardSize, rightImagePoints[curImg], right_found);
+
+    objectPoints[curImg] = Create3DChessboardCorners(boardSize, squareSize);
+    }
+
+    rms = stereoCalibrate(objectPoints, leftImagePoints, rightImagePoints,
+                    cameraMatrix[0], distortionCoefficients[0],
+                    cameraMatrix[1], distortionCoefficients[1],
+                    imageSize, rotationMatrix, translationVector, essentialMatrix, fundamentalMatrix,
+                    CV_CALIB_FIX_ASPECT_RATIO +
+                    CV_CALIB_ZERO_TANGENT_DIST +
+                    CV_CALIB_SAME_FOCAL_LENGTH +
+                    CV_CALIB_RATIONAL_MODEL +
+                    CV_CALIB_FIX_K3 + CV_CALIB_FIX_K4 + CV_CALIB_FIX_K5,
+                    TermCriteria(CV_TERMCRIT_ITER+CV_TERMCRIT_EPS, 100, 1e-5));
+
+    //armazeno o resultado obtido através da calibração em um arquivo
+    cv::FileStorage file("calib.txt", cv::FileStorage::WRITE);
+    file << "rms" << rms;
+
+    file << "cameraL" << cameraMatrix[0];
+    file << "cameraR" << cameraMatrix[1];
+
+    file << "distCoefL" << distortionCoefficients[0];
+    file << "distCoefR" << distortionCoefficients[1];
+
+    file << "rotMatrix" << rotationMatrix;
+    file << "translVec" << translationVector;
+    file << "essMatrix" << essentialMatrix;
+    file << "fundMatrix" << fundamentalMatrix;
+}
+
+void criaDatasetCalib(){
+    Size boardSize(9,6);
+    int curImg = 0;
+    int nImages = 0;
+
+    cout << "Digite a quantidade de imagens para a calibração: ";
+    cin >> nImages;
+
+    if(nImages == 0) return 0;
+
+    VideoCapture left(1); //parâmetro de inicialização, representa a câmera
+    VideoCapture right(2);
+
+    std::vector<std::vector<Point2f>> leftImagePoints(nImages);
+    std::vector<std::vector<Point2f>> rightImagePoints(nImages);
+
+    Mat left_f, right_f, left_chess, right_chess;
+
+    while(true){
+
+    if(!(left.grab() && right.grab())) return -1; //método "grab" garante que o frame da câmera da esquerda seja capturado
+                                                    //ao mesmo tempo que o frame da câmera da direita
+
+    left.read(left_f);
+    right.read(right_f);
+
+    if(left_f.empty() || right_f.empty())
+    {
+        std::cerr << "ERRO! Frame não capturado." << std::endl;
+        return -1;
+    }
+
+
+    if(right_f.size() != left_f.size())
+    {
+        std::cerr << "ERRO! Imagens não possuem a mesma resolução." << std::endl;
+        return -1;
+    }
+
+    bool left_found = findChessboardCorners(left_f, boardSize, leftImagePoints[curImg]);
+    bool right_found = findChessboardCorners(right_f, boardSize, rightImagePoints[curImg]);
+
+    left_chess = left_f.clone();
+    right_chess = right_f.clone();
+
+    drawChessboardCorners(left_chess, boardSize, leftImagePoints[curImg], left_found);
+    drawChessboardCorners(right_chess, boardSize, rightImagePoints[curImg], right_found);
+
+    imshow("Left View", left_chess);
+    imshow("Right View", right_chess);
+
+    //caso o alvo esteja presente nas duas imagens e o usuário pressionou alguma tecla, crie uma imagem para a calibração
+    if((waitKey(2) > 0) && (left_found && right_found)) 
+        {
+        cout << "Print " << curImg << "!" << endl; 
+
+        imwrite("calib/left_" + to_string(curImg) + ".jpg", left_f);
+
+        imwrite("calib/right_" + to_string(curImg) + ".jpg" , right_f);
+        curImg++;
+        }
+    if(curImg > (nImages-1)) break;
+    }
+
+    return 0;
+}
+
+void stereo(){
+    FileStorage readFile("calib.txt", FileStorage::READ);
+
+    Mat cameraL,
+        cameraR,
+        distortionCoefficientsL,
+        distortionCoefficientsR,
+        rotationMatrix,
+        translationVector,
+        essentialMatrix,
+        fundamentalMatrix;
+
+    readFile["cameraL"] >> cameraL;
+    readFile["cameraR"] >> cameraR;
+    readFile["distCoefL"] >> distortionCoefficientsL;
+    readFile["distCoefR"] >> distortionCoefficientsR;
+    readFile["rotMatrix"] >> rotationMatrix;
+    readFile["translVec"] >> translationVector;
+    readFile["essMatrix"] >> essentialMatrix;
+    readFile["fundMatrix"] >> fundamentalMatrix;
+
+    //tire os comentários caso queira verificar ao vivo
+    VideoCapture leftim(1);
+    VideoCapture rightim(2);
+
+    Mat left, right, disp;
+
+    Rect roi1, roi2;
+
+    Mat rectTransL, rectTransR,
+        projMatrixL, projMatrixR, 
+        disp_depthMatrix;
+
+    Size newImageSize;
+
+    int frame2_width = rightim.get(CV_CAP_PROP_FRAME_WIDTH); 
+    int frame2_height = rightim.get(CV_CAP_PROP_FRAME_HEIGHT); 
+
+
+    VideoWriter video("mapaDisparidades.avi",CV_FOURCC('M','J','P','G'), rightim.get(CV_CAP_PROP_FPS), Size(frame2_width,frame2_height));
+
+
+    while(true){
+
+    //tire os comentários caso queira verificar ao vivo
+    if(!(leftim.grab() && rightim.grab())) return -1;
+
+    leftim.read(left);
+    rightim.read(right);
+
+    if(left.empty() || right.empty())
+    {
+        std::cerr << "ERRO! Frames não capturados." << std::endl;
+        return -1;
+    }
+
+    if(right.size() != left.size()) return -1;
+
+    cvtColor(left, left, COLOR_RGB2GRAY);
+    cvtColor(right, right, COLOR_RGB2GRAY);
+
+    //realiza a retificação das imagens
+    stereoRectify(cameraL, distortionCoefficientsL,
+                    cameraR, distortionCoefficientsR,
+                    Size(640,480), rotationMatrix, translationVector,
+                    rectTransL, rectTransR,
+                    projMatrixL, projMatrixR,
+                    disp_depthMatrix, CALIB_ZERO_DISPARITY, -1, newImageSize, &roi1, &roi2);
+
+    Mat newCameraL, newCameraR, left_map1, left_map2, right_map1, right_map2;
+
+    Mat left_und, right_und;
+
+    initUndistortRectifyMap(cameraL, distortionCoefficientsL,
+                            rectTransL, projMatrixL, Size(left.cols, left.rows),
+                            CV_16SC2, left_map1, left_map2);
+    initUndistortRectifyMap(cameraR, distortionCoefficientsR,
+                            rectTransR, projMatrixR, Size(right.cols, right.rows),
+                            CV_16SC2, right_map1, right_map2);
+
+    remap(left, left_und, left_map1, left_map2, INTER_LINEAR);
+    remap(right, right_und, right_map1, left_map2, INTER_LINEAR);
+
+
+    GaussianBlur(left, left, Size(5,5), 10, 10, BORDER_DEFAULT);
+    GaussianBlur(right, right, Size(5,5), 10, 10, BORDER_DEFAULT);
+
+    Ptr<StereoBM> bm = StereoBM::create(0,21);
+
+    //bm->setROI1(roi1);
+    //bm->setROI2(roi2);
+    bm->setPreFilterCap(31);
+    bm->setBlockSize(15);
+    bm->setMinDisparity(0);
+    bm->setNumDisparities(64);
+    bm->setTextureThreshold(1000);
+    bm->setUniquenessRatio(15);
+    bm->setSpeckleWindowSize(100);
+    bm->setSpeckleRange(32);
+    bm->setDisp12MaxDiff(10);
+
+    //calcula o mapa de disparidades a partir das imagens retificadas
+    bm->compute(left_und, right_und, disp);
+
+    //como o mapa de disparidade está muito saturado, normalizamos a imagem para podermos visualizar o mapa de forma clara
+    normalize(disp, disp, 0, 255, CV_MINMAX, CV_8U);
+
+    //muda-se a apresentação das intensidades para melhorar a visualização
+    applyColorMap(disp, disp, COLORMAP_JET);
+
+    video.write(disp);
+
+    imshow("Mapa de disparidades", disp);
+
+    if(waitKey(2) > 0) break;
+}
+
+std::vector<Point3f> Create3DChessboardCorners(Size boardSize, float squareSize){
+  // This function creates the 3D points of your chessboard in its own coordinate system
+
+  std::vector<Point3f> corners;
+
+  for( int i = 0; i < boardSize.height; i++ )
+  {
+    for( int j = 0; j < boardSize.width; j++ )
+    {
+      corners.push_back(Point3f(float(j*squareSize),
+                                float(i*squareSize), 0));
+    }
+  }
+
+  return corners;
 }

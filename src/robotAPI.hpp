@@ -76,3 +76,6 @@ void viraAngulo(char direcao, int vira);
 
 int getImage(int im);
 void calibrarCamera();
+void criaDatasetCalib();
+void stereo();
+std::vector<Point3f> Create3DChessboardCorners(Size boardSize, float squareSize);
