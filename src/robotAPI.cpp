@@ -453,8 +453,8 @@ cout << "OK4\n";
         bool left_found = findChessboardCorners(left_f, boardSize, leftImagePoints[curImg]);
         bool right_found = findChessboardCorners(right_f, boardSize, rightImagePoints[curImg]);
 
-        left_chess = left_f.clone();
-        right_chess = right_f.clone();
+       // left_chess = left_f.clone();
+       // right_chess = right_f.clone();
 
        // drawChessboardCorners(left_chess, boardSize, leftImagePoints[curImg], left_found);
       //  drawChessboardCorners(right_chess, boardSize, rightImagePoints[curImg], right_found);
@@ -463,7 +463,7 @@ cout << "OK4\n";
        // imshow("Right View", right_chess);
 cout << "OK5\n";
         //caso o alvo esteja presente nas duas imagens e o usuário pressionou alguma tecla, crie uma imagem para a calibração
-        if((waitKey(2) > 0) && (left_found && right_found)) 
+        if(/*(waitKey(2) > 0) && */(left_found && right_found)) 
             {
             cout << "Print " << curImg << "!" << endl; 
 
