@@ -2,14 +2,16 @@
 
 int main(int argc, char *argv[]){
 	
-	if(wiringPiSetupGpio() == -1) return -1;
+    if(wiringPiSetupGpio() == -1) return -1;
 
     configuraIOs();
 
     int i;
-    criaDatasetCalib();
-    calibrarCamera();
+   // criaDatasetCalib();
+   // calibrarCamera();
+   // stereo();
     
+
     //for(i = 0; i < 1; i++){
         //moveDistancia('f', 1); //se movimenta para frente por um metro
         //vira('d', 1); //vira para direita por 1 segundos
@@ -430,13 +432,12 @@ int criaDatasetCalib(){
     Mat left_f, right_f, left_chess, right_chess;
     cout << "OK\n";
     while(true){
-        cout << "OK1\n";
         if(!(leftcap.grab() && rightcap.grab())) return -1; //método "grab" garante que o frame da câmera da esquerda seja capturado
                                                         //ao mesmo tempo que o frame da câmera da direita
-cout << "OK2\n";
+
         leftcap.read(left_f);
         rightcap.read(right_f);
-cout << "OK3\n";
+
         if(left_f.empty() || right_f.empty())
         {
             std::cerr << "ERRO! Frame não capturado." << std::endl;
@@ -449,7 +450,7 @@ cout << "OK3\n";
             std::cerr << "ERRO! Imagens não possuem a mesma resolução." << std::endl;
             return -1;
         }
-cout << "OK4\n";
+
         bool left_found = findChessboardCorners(left_f, boardSize, leftImagePoints[curImg]);
         bool right_found = findChessboardCorners(right_f, boardSize, rightImagePoints[curImg]);
 
@@ -461,8 +462,10 @@ cout << "OK4\n";
 
        // imshow("Left View", left_chess);
        // imshow("Right View", right_chess);
-cout << "OK5\n";
+
         //caso o alvo esteja presente nas duas imagens e o usuário pressionou alguma tecla, crie uma imagem para a calibração
+        cout << "digite: ";
+        getchar();	
         if(/*(waitKey(2) > 0) && */(left_found && right_found)) 
             {
             cout << "Print " << curImg << "!" << endl; 
@@ -471,9 +474,10 @@ cout << "OK5\n";
 
             imwrite("calib_dataset/right_" + to_string(curImg) + ".jpg" , right_f);
             curImg++;
-            }
+            }else{
+		cout << "não deu certo\n";
+	    }
         if(curImg > (nImages-1)) break;
-        cout << "TENTE TIRAR";
     }
 
     return 0;
@@ -481,7 +485,7 @@ cout << "OK5\n";
 
 int stereo(){
     FileStorage readFile("calib.txt", FileStorage::READ);
-
+    
     Mat cameraL,
         cameraR,
         distortionCoefficientsL,
@@ -503,7 +507,7 @@ int stereo(){
     //tire os comentários caso queira verificar ao vivo
     //VideoCapture leftcap(0);
     //VideoCapture rightcap(1);
-
+    cout << "Dados ok\n";
     Mat left, right, disp;
 
     Rect roi1, roi2;
@@ -520,7 +524,7 @@ int stereo(){
 
 //    VideoWriter video("mapaDisparidades.avi",CV_FOURCC('M','J','P','G'), rightim.get(CV_CAP_PROP_FPS), Size(frame2_width,frame2_height));
 
-
+    int i = 0;
     while(true){
 
         //tire os comentários caso queira verificar ao vivo
@@ -541,7 +545,7 @@ int stereo(){
         cvtColor(right, right, COLOR_RGB2GRAY);
 
         //realiza a retificação das imagens
-        stereoRectify(cameraL, distortionCoefficientsL,
+        stereoRectify(cameraL, distortionCoefficientsL, 
                         cameraR, distortionCoefficientsR,
                         Size(640,480), rotationMatrix, translationVector,
                         rectTransL, rectTransR,
@@ -584,14 +588,15 @@ int stereo(){
         bm->compute(left_und, right_und, disp);
 
         //como o mapa de disparidade está muito saturado, normalizamos a imagem para podermos visualizar o mapa de forma clara
-        normalize(disp, disp, 0, 255, CV_MINMAX, CV_8U);
+      
 
         //muda-se a apresentação das intensidades para melhorar a visualização
-        applyColorMap(disp, disp, COLORMAP_JET);
+        //applyColorMap(disp, disp, COLORMAP_JET);
 
+        reprojectImageTo3D(disp, disp, disp_depthMatrix);
 //        video.write(disp);
-
-        imshow("Mapa de disparidades", disp);
+        //  normalize(disp, disp, 0, 255, CV_MINMAX, CV_8UC1);	
+        imwrite("ew/map"+to_string(i++)+".jpg", disp);
 
         if(waitKey(2) > 0) break;
     }
